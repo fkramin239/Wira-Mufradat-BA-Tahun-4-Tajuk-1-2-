@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wira Mufradat - RPG Bahasa Arab (Interactive Preview)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & Cairo for Arabic support -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+        .font-arabic {
+            font-family: 'Cairo', sans-serif;
+        }
+        .font-pixel {
+            font-family: 'Press Start 2P', monospace;
+        }
+        /* Floating Damage Text Animation */
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            50% { opacity: 1; transform: translateY(-30px) scale(1.3); }
+            100% { opacity: 0; transform: translateY(-60px) scale(0.9); }
+        }
+        .animate-float-damage {
+            animation: floatUp 1s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+        }
+        /* Monster Hit Shake Animation */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-12px) rotate(-2deg); }
+            40%, 80% { transform: translateX(12px) rotate(2deg); }
+        }
+        .animate-shake {
+            animation: shake 0.4s ease-in-out;
+        }
+        /* Attack Slash Animation */
+        @keyframes slash {
+            0% { opacity: 0; transform: scale(0.5) rotate(-45deg); }
+            50% { opacity: 1; transform: scale(1.2) rotate(0deg); }
+            100% { opacity: 0; transform: scale(1.5) rotate(45deg); }
+        }
+        .animate-slash {
+            animation: slash 0.35s ease-out forwards;
+        }
+        /* Print Stylesheet for Teacher Admin Panel */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #printable-area, #printable-area * {
+                visibility: visible;
+            }
+            #printable-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                color: black !important;
+                background: white !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            table {
+                border-collapse: collapse !important;
+                width: 100% !important;
+            }
+            th, td {
+                border: 1px solid #000 !important;
+                padding: 8px !important;
+                color: #000 !important;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between overflow-x-hidden bg-slate-950 text-slate-100">
+
+    <header id="top-nav" class="bg-slate-900/90 border-b border-slate-800 p-3 sm:p-4 sticky top-0 z-40 backdrop-blur-md">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <!-- Brand Logo / Title -->
+            <div class="flex items-center gap-2 cursor-pointer" onclick="resetToHome()">
+                <span class="text-2xl sm:text-3xl">⚔️</span>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-black bg-gradient-to-r from-amber-400 via-orange-400 to-red-500 bg-clip-text text-transparent">
+                        WIRA MUFRADAT
+                    </h1>
+                    <p class="text-[10px] sm:text-xs text-slate-400 font-semibold tracking-wider">RPG BAHASA ARAB</p>
+                </div>
+            </div>
+
+            <!-- Quick Navigation Menu Buttons -->
+            <nav class="hidden md:flex items-center gap-2">
+                <button onclick="resetToHome()" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-bold transition flex items-center gap-1">
+                    🏠 Utama
+                </button>
+                <button onclick="scrollToVocabList()" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-bold transition flex items-center gap-1">
+                    📖 Nota Mufradat
+                </button>
+                <button onclick="openAdminModal()" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-bold transition flex items-center gap-1">
+                    📊 Papan Markah
+                </button>
+            </nav>
+
+            <!-- Global Controls & Sound Buttons -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <button id="btn-bgm" onclick="toggleBGM()" title="Muzik Latar" class="p-2 sm:px-3 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 transition flex items-center gap-1">
+                    <span id="bgm-icon">🎵</span> <span class="hidden sm:inline text-xs font-semibold">BGM: ON</span>
+                </button>
+                <button id="btn-sfx" onclick="toggleSFX()" title="Kesan Bunyi" class="p-2 sm:px-3 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 transition flex items-center gap-1">
+                    <span id="sfx-icon">🔊</span> <span class="hidden sm:inline text-xs font-semibold">SFX: ON</span>
+                </button>
+                <button onclick="openAdminModal()" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-teal-900/30 transition flex items-center gap-1">
+                    🔒 <span class="hidden sm:inline">Panel</span> Guru
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Sub-Navigation Bar -->
+    <div class="md:hidden bg-slate-900 border-b border-slate-800 px-4 py-2 flex justify-around items-center text-xs font-bold text-slate-300">
+        <button onclick="resetToHome()" class="flex items-center gap-1 hover:text-amber-400 transition">
+            🏠 Utama
+        </button>
+        <span class="text-slate-700">|</span>
+        <button onclick="scrollToVocabList()" class="flex items-center gap-1 hover:text-amber-400 transition">
+            📖 Nota
+        </button>
+        <span class="text-slate-700">|</span>
+        <button onclick="openAdminModal()" class="flex items-center gap-1 hover:text-amber-400 transition">
+            📊 Rekod
+        </button>
+    </div>
+
+    <main class="flex-grow flex items-center justify-center p-3 sm:p-6">
+        <div class="w-full max-w-4xl">
+
+            <!-- ================= VIEW 1: REGISTRATION & CHARACTER CREATION ================= -->
+            <section id="view-registration" class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 sm:p-10 shadow-2xl backdrop-blur-sm space-y-8">
+                <div>
+                    <div class="text-center mb-8">
+                        <h2 class="text-2xl sm:text-4xl font-extrabold text-amber-400 mb-2">Pendaftaran Wira Mufradat</h2>
+                        <p class="text-slate-400 text-sm sm:text-base">Sediakan watak anda dan kuasai perbendaharaan kata Bahasa Arab!</p>
+                    </div>
+
+                    <form id="form-registration" onsubmit="startGame(event)" class="space-y-6 max-w-xl mx-auto">
+                    <!-- Student Info Input -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">Nama Murid</label>
+                            <input type="text" id="player-name" required placeholder="Contoh: Ahmad Zaki" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">Kelas</label>
+                            <input type="text" id="player-class" required placeholder="Contoh: 5 UPM" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition">
+                        </div>
+                    </div>
+
+                    <!-- Hero Avatar Class Selection -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-3">Pilih Kelas Hero</label>
+                        <div class="grid grid-cols-3 gap-3 sm:gap-4">
+                            <!-- Knight Option -->
+                            <label class="cursor-pointer group">
+                                <input type="radio" name="hero-avatar" value="Knight" class="peer hidden" checked>
+                                <div class="p-4 rounded-xl border-2 border-slate-800 bg-slate-950/80 peer-checked:border-amber-500 peer-checked:bg-amber-950/30 group-hover:border-slate-600 transition text-center flex flex-col items-center">
+                                    <div class="text-4xl sm:text-5xl mb-2 group-hover:scale-110 transition">🗡️</div>
+                                    <div class="font-bold text-amber-400 text-sm">Pahlawan</div>
+                                    <div class="text-[10px] text-slate-400">Knight</div>
+                                </div>
+                            </label>
+                            <!-- Mage Option -->
+                            <label class="cursor-pointer group">
+                                <input type="radio" name="hero-avatar" value="Mage" class="peer hidden">
+                                <div class="p-4 rounded-xl border-2 border-slate-800 bg-slate-950/80 peer-checked:border-purple-500 peer-checked:bg-purple-950/30 group-hover:border-slate-600 transition text-center flex flex-col items-center">
+                                    <div class="text-4xl sm:text-5xl mb-2 group-hover:scale-110 transition">🧙‍♂️</div>
+                                    <div class="font-bold text-purple-400 text-sm">Penyihir</div>
+                                    <div class="text-[10px] text-slate-400">Mage</div>
+                                </div>
+                            </label>
+                            <!-- Archer Option -->
+                            <label class="cursor-pointer group">
+                                <input type="radio" name="hero-avatar" value="Archer" class="peer hidden">
+                                <div class="p-4 rounded-xl border-2 border-slate-800 bg-slate-950/80 peer-checked:border-emerald-500 peer-checked:bg-emerald-950/30 group-hover:border-slate-600 transition text-center flex flex-col items-center">
+                                    <div class="text-4xl sm:text-5xl mb-2 group-hover:scale-110 transition">🏹</div>
+                                    <div class="font-bold text-emerald-400 text-sm">Pemanah</div>
+                                    <div class="text-[10px] text-slate-400">Archer</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Topic Selection -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">Pilih Tajuk Soalan</label>
+                        <select id="selected-topic" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-amber-400 font-semibold focus:outline-none focus:border-amber-500 transition">
+                            <option value="all">🌟 Semua Tajuk (Campuran)</option>
+                            <option value="months">📅 Bulan-Bulan Miladiyyah (يناير - ديسمبر)</option>
+                            <option value="events">🎉 Hari-Hari Sambutan Sekolah (يوم المعلمين...)</option>
+                            <option value="staff">🏫 Warga Sekolah (مدير, معلم...)</option>
+                        </select>
+                    </div>
+
+                    <!-- Start Button -->
+                    <button type="submit" class="w-full py-4 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-red-600 hover:from-amber-400 hover:to-red-500 text-slate-950 font-black text-lg shadow-xl shadow-orange-950/50 hover:scale-[1.01] transition transform active:scale-95">
+                        MULA KEMBARA ⚔️
+                    </button>
+                </form>
+                </div>
+
+                <!-- Quick Vocabulary Reference Card (Target for Navigation) -->
+                <div id="vocab-reference-section" class="border-t border-slate-800 pt-8 mt-8">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-amber-400 flex items-center gap-2">
+                            <span>📖</span> Panduan Nota Mufradat Bahasa Arab
+                        </h3>
+                        <span class="text-xs text-slate-400">Rujukan Pantas</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                            <h4 class="font-bold text-xs text-amber-300 uppercase mb-2">📅 Bulan Miladiyyah</h4>
+                            <ul class="text-xs text-slate-300 space-y-1">
+                                <li>يناير (Januari) • فبراير (Februari)</li>
+                                <li>مارس (Mac) • أبريل (April)</li>
+                                <li>مايو (Mei) • يونيو (Jun)</li>
+                            </ul>
+                        </div>
+                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                            <h4 class="font-bold text-xs text-emerald-300 uppercase mb-2">🎉 Sambutan Sekolah</h4>
+                            <ul class="text-xs text-slate-300 space-y-1">
+                                <li>يوم المعلمين (Hari Guru)</li>
+                                <li>يوم الرياضة (Hari Sukan)</li>
+                                <li>يوم العلوم (Hari Sains)</li>
+                            </ul>
+                        </div>
+                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                            <h4 class="font-bold text-xs text-cyan-300 uppercase mb-2">🏫 Warga Sekolah</h4>
+                            <ul class="text-xs text-slate-300 space-y-1">
+                                <li>مدير (Guru Besar)</li>
+                                <li>معلم / معلمة (Guru)</li>
+                                <li>تلميذ / تلميذة (Murid)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= VIEW 2: GAME BATTLE ARENA ================= -->
+            <section id="view-battle" class="hidden space-y-4">
+
+                <!-- Battle HUD Stats Header -->
+                <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl flex justify-between items-center flex-wrap gap-3">
+                    <div class="flex items-center gap-3">
+                        <div id="battle-hero-avatar-icon" class="text-3xl sm:text-4xl">🗡️</div>
+                        <div>
+                            <div id="battle-player-name" class="font-extrabold text-amber-400 text-base sm:text-lg">Nama Wira</div>
+                            <div id="battle-player-class" class="text-xs text-slate-400">Kelas 5 UPM</div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-4">
+                        <!-- Combo Counter -->
+                        <div class="text-center px-3 py-1 bg-slate-950 border border-slate-800 rounded-xl">
+                            <span class="text-[10px] text-slate-400 font-bold block uppercase">Combo</span>
+                            <span id="combo-count" class="text-lg font-black text-amber-400">0x</span>
+                        </div>
+                        <!-- Score Display -->
+                        <div class="text-center px-4 py-1 bg-slate-950 border border-slate-800 rounded-xl">
+                            <span class="text-[10px] text-slate-400 font-bold block uppercase">Mata Skor</span>
+                            <span id="battle-score" class="text-lg font-black text-emerald-400">0</span>
+                        </div>
+                        <!-- Pause & Quit Game Buttons -->
+                        <div class="flex items-center gap-1.5 border-l border-slate-800 pl-3">
+                            <button onclick="togglePauseGame()" title="Jeda Permainan (Pause)" class="p-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 transition text-sm font-bold flex items-center gap-1">
+                                ⏸️ <span class="hidden lg:inline text-xs">Jeda</span>
+                            </button>
+                            <button onclick="quitGamePrompt()" title="Hentikan Permainan (Quit)" class="p-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 transition text-sm font-bold flex items-center gap-1">
+                                ⏹️ <span class="hidden lg:inline text-xs">Henti</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Arena Stage Box -->
+                <div class="relative bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-10 shadow-2xl min-h-[320px] flex flex-col justify-between overflow-hidden">
+                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.05)_0,transparent_100%)] pointer-events-none"></div>
+
+                    <!-- Floating Damage / Miss Output Area -->
+                    <div id="floating-text-container" class="absolute inset-0 pointer-events-none z-30 flex items-center justify-center"></div>
+
+                    <!-- Top Stage: Health Bars -->
+                    <div class="grid grid-cols-2 gap-4 sm:gap-8 z-10">
+                        <!-- Player Health Bar -->
+                        <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800">
+                            <div class="flex justify-between items-center mb-1 text-xs font-bold">
+                                <span class="text-amber-400 flex items-center gap-1">❤️ <span id="hero-title-name">Wira</span></span>
+                                <span id="player-hp-text" class="text-slate-300">100/100</span>
+                            </div>
+                            <div class="w-full bg-slate-800 h-3.5 rounded-full overflow-hidden border border-slate-700">
+                                <div id="player-hp-bar" class="bg-gradient-to-r from-emerald-500 to-green-400 h-full transition-all duration-300" style="width: 100%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Monster Health Bar -->
+                        <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800">
+                            <div class="flex justify-between items-center mb-1 text-xs font-bold">
+                                <span class="text-red-400 flex items-center gap-1">👾 <span id="monster-name">Raksasa Mufradat</span></span>
+                                <span id="monster-hp-text" class="text-slate-300">100/100</span>
+                            </div>
+                            <div class="w-full bg-slate-800 h-3.5 rounded-full overflow-hidden border border-slate-700">
+                                <div id="monster-hp-bar" class="bg-gradient-to-r from-red-600 to-rose-400 h-full transition-all duration-300" style="width: 100%;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Middle Stage: Battle Visual Characters -->
+                    <div class="flex justify-between items-center my-6 z-10 px-4 sm:px-12">
+                        <!-- Player Hero Sprite -->
+                        <div id="player-sprite" class="relative text-6xl sm:text-8xl transition-all duration-300 filter drop-shadow-xl">
+                            <span id="player-emoji">🗡️</span>
+                            <div id="player-slash-effect" class="absolute inset-0 flex items-center justify-center hidden">
+                                <span class="text-5xl text-red-500 animate-slash">💥</span>
+                            </div>
+                        </div>
+
+                        <!-- VS Indicator Badge -->
+                        <div class="text-xl sm:text-2xl font-black text-slate-600 font-pixel opacity-70">VS</div>
+
+                        <!-- Enemy Monster Sprite -->
+                        <div id="monster-sprite" class="relative text-6xl sm:text-8xl transition-all duration-300 filter drop-shadow-xl">
+                            <span id="monster-emoji">👹</span>
+                            <div id="monster-slash-effect" class="absolute inset-0 flex items-center justify-center hidden">
+                                <span class="text-5xl text-amber-400 animate-slash">⚔️</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Questions Display Card -->
+                    <div class="bg-slate-900/90 border border-slate-700 rounded-xl p-4 sm:p-6 text-center z-10 shadow-lg">
+                        <div class="flex justify-center items-center gap-2 mb-2">
+                            <span id="topic-tag" class="text-[10px] uppercase tracking-widest font-bold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">Tajuk</span>
+                            <button id="btn-tts" onclick="speakArabicQuestion()" class="p-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 transition" title="Dengar Sebutan (Arabic Speech)">
+                                🔊 <span class="text-xs font-semibold">Sebut</span>
+                            </button>
+                        </div>
+
+                        <!-- Arabic Question Word -->
+                        <div id="question-arabic" class="font-arabic text-3xl sm:text-5xl font-extrabold text-amber-300 my-2 leading-relaxed tracking-wide">
+                            مُحَمَّدٌ
+                        </div>
+
+                        <p class="text-xs sm:text-sm text-slate-400 mt-1">Pilih maksud Bahasa Melayu yang betul untuk menyerang raksasa!</p>
+                    </div>
+                </div>
+
+                <!-- Bottom Stage: Multiple Choice Options -->
+                <div id="options-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <!-- Option Buttons dynamically inserted here -->
+                </div>
+            </section>
+
+            <!-- ================= VIEW 3: GAME OVER / RESULT ================= -->
+            <section id="view-result" class="hidden bg-slate-900/90 border border-slate-800 rounded-2xl p-6 sm:p-10 text-center shadow-2xl backdrop-blur-md">
+                <div id="result-icon" class="text-6xl sm:text-8xl mb-4">🏆</div>
+                <h2 id="result-title" class="text-3xl sm:text-5xl font-black text-amber-400 mb-2">TAHNIAH! KEMENANGAN!</h2>
+                <p id="result-subtitle" class="text-slate-300 text-sm sm:text-base max-w-md mx-auto mb-6">Anda berjaya menewaskan Raksasa Mufradat dan menguasai Bahasa Arab!</p>
+
+                <!-- Summary Stat Badges -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto mb-8">
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <span class="text-[10px] text-slate-400 font-bold block uppercase">Skor Akhir</span>
+                        <span id="final-score" class="text-xl sm:text-2xl font-black text-emerald-400">0</span>
+                    </div>
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <span class="text-[10px] text-slate-400 font-bold block uppercase">Kombo Tertinggi</span>
+                        <span id="final-combo" class="text-xl sm:text-2xl font-black text-amber-400">0x</span>
+                    </div>
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <span class="text-[10px] text-slate-400 font-bold block uppercase">Ketepatan</span>
+                        <span id="final-accuracy" class="text-xl sm:text-2xl font-black text-cyan-400">0%</span>
+                    </div>
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <span class="text-[10px] text-slate-400 font-bold block uppercase">Soalan Dijawab</span>
+                        <span id="final-total" class="text-xl sm:text-2xl font-black text-purple-400">0/0</span>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button onclick="resetToHome()" class="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold transition">
+                        🏠 Ke Halaman Utama
+                    </button>
+                    <button onclick="playAgain()" class="px-8 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-red-600 hover:from-amber-400 hover:to-red-500 text-slate-950 font-black shadow-lg transition">
+                        ⚔️ Main Lagi
+                    </button>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- ================= PAUSE MODAL ================= -->
+    <div id="modal-pause" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md hidden items-center justify-center p-4 z-50">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 sm:p-8 text-center shadow-2xl space-y-6">
+            <div class="text-5xl">⏸️</div>
+            <div>
+                <h3 class="text-2xl font-black text-amber-400 mb-1">Permainan Dijeda</h3>
+                <p class="text-slate-400 text-sm">Kembara Wira Mufradat anda sedang berhenti seketika.</p>
+            </div>
+            <div class="space-y-3">
+                <button onclick="togglePauseGame()" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black rounded-xl transition shadow-lg">
+                    ▶️ Sambung Permainan (Resume)
+                </button>
+                <button onclick="quitGameConfirm()" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-red-400 border border-red-500/30 font-bold rounded-xl transition">
+                    ⏹️ Hentikan & Kembali ke Utama
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= QUIT CONFIRMATION MODAL ================= -->
+    <div id="modal-quit-confirm" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md hidden items-center justify-center p-4 z-50">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 sm:p-8 text-center shadow-2xl space-y-6">
+            <div class="text-5xl">⚠️</div>
+            <div>
+                <h3 class="text-2xl font-black text-red-400 mb-1">Hentikan Permainan?</h3>
+                <p class="text-slate-400 text-sm">Adakah anda pasti mahu menghentikan permainan? Skor semasa anda tidak akan direkodkan sebagai tamat.</p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeQuitModal()" class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl transition">
+                    Tidak (Kembali)
+                </button>
+                <button onclick="executeQuitGame()" class="flex-1 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition shadow-lg">
+                    Ya, Hentikan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= TEACHER ADMIN PANEL MODAL ================= -->
+    <div id="modal-admin" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md hidden items-center justify-center p-4 z-50">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            
+            <!-- Modal Header -->
+            <div class="p-4 sm:p-5 border-b border-slate-800 flex justify-between items-center bg-slate-950/50">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">🔒</span>
+                    <div>
+                        <h3 class="font-bold text-slate-100 text-base sm:text-lg">Panel Pentadbir Guru</h3>
+                        <p class="text-xs text-slate-400">Rekod Penguasaan Mufradat Bahasa Arab Murid</p>
+                    </div>
+                </div>
+                <button onclick="closeAdminModal()" class="text-slate-400 hover:text-white p-2 text-xl font-bold">✕</button>
+            </div>
+
+            <!-- Login Section (If Password Not Authenticated) -->
+            <div id="admin-login-sec" class="p-6 sm:p-10 text-center max-w-md mx-auto my-auto w-full">
+                <div class="text-4xl mb-3">🔑</div>
+                <h4 class="text-lg font-bold text-amber-400 mb-2">Kata Laluan Pentadbir</h4>
+                <p class="text-xs text-slate-400 mb-4">Sila masukkan kata laluan guru untuk mengakses rekod murid. (Default: <code class="text-amber-300">admin</code> atau <code class="text-amber-300">guru</code>)</p>
+                <form onsubmit="verifyAdminPass(event)" class="space-y-3">
+                    <input type="password" id="admin-pass-input" required placeholder="Masukkan Kata Laluan" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-center text-white focus:outline-none focus:border-amber-500">
+                    <button type="submit" class="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl transition">
+                        Luar Kunci / Masuk
+                    </button>
+                </form>
+            </div>
+
+            <!-- Main Records Dashboard (Visible After Auth) -->
+            <div id="admin-dashboard-sec" class="hidden flex-col flex-grow overflow-hidden p-4 sm:p-6 space-y-4">
+                
+                <!-- Filter Controls Toolbar -->
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-wrap gap-4 items-center justify-between no-print">
+                    <div class="flex flex-wrap gap-3 items-center w-full sm:w-auto">
+                        <!-- Class Dropdown Filter -->
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Penapis Kelas</label>
+                            <select id="filter-class" onchange="applyAdminFilters()" class="bg-slate-900 border border-slate-700 text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500">
+                                <option value="all">Semua Kelas</option>
+                            </select>
+                        </div>
+
+                        <!-- Date Picker Filter -->
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Penapis Tarikh</label>
+                            <input type="date" id="filter-date" onchange="applyAdminFilters()" class="bg-slate-900 border border-slate-700 text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500">
+                        </div>
+
+                        <!-- Reset Filter Button -->
+                        <div class="flex items-end">
+                            <button onclick="resetAdminFilters()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg transition mt-5">
+                                🔄 Set Semula
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Action Export & Print Buttons -->
+                    <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                        <button onclick="exportCSV()" class="px-3 py-2 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition flex items-center gap-1">
+                            📥 Export CSV
+                        </button>
+                        <button onclick="printRecords()" class="px-3 py-2 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/30 text-xs font-bold transition flex items-center gap-1">
+                            🖨️ Cetak Senarai (A4)
+                        </button>
+                        <button onclick="clearAllRecords()" class="px-3 py-2 rounded-lg bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 text-xs font-bold transition flex items-center gap-1">
+                            🗑️ Padam Semua
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Printable Records Area -->
+                <div id="printable-area" class="flex-grow overflow-y-auto bg-slate-950 border border-slate-800 rounded-xl p-4">
+                    <div class="hidden print:block mb-4">
+                        <h2 class="text-2xl font-bold text-black">Laporan Prestasi Wira Mufradat Bahasa Arab</h2>
+                        <p class="text-sm text-gray-600">Tarikh Cetakan: <span id="print-timestamp"></span></p>
+                    </div>
+
+                    <table class="w-full text-left text-xs sm:text-sm text-slate-300">
+                        <thead class="bg-slate-900 text-slate-400 uppercase text-[10px] font-bold border-b border-slate-800 sticky top-0">
+                            <tr>
+                                <th class="p-3">#</th>
+                                <th class="p-3">Tarikh & Masa</th>
+                                <th class="p-3">Nama Murid</th>
+                                <th class="p-3">Kelas</th>
+                                <th class="p-3">Hero</th>
+                                <th class="p-3 text-center">Skor</th>
+                                <th class="p-3 text-center">Kombo</th>
+                                <th class="p-3 text-center">Ketepatan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="records-table-body" class="divide-y divide-slate-800">
+                            <!-- Records rendered here -->
+                        </tbody>
+                    </table>
+
+                    <div id="no-records-msg" class="text-center py-12 text-slate-500 text-sm hidden">
+                        Tiada rekod murid ditemui untuk penapis yang dipilih.
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Information -->
+    <footer class="bg-slate-950 border-t border-slate-900 p-3 text-center text-xs text-slate-500">
+        Wira Mufradat RPG Bahasa Arab &copy; 2026 - Penguasaan Kosa Kata Interaktif Sekolah
+    </footer>
+
+    <script>
+        const VOCAB_DATABASE = [
+            { id: 1, arabic: "يَنَايِر", malay: "Januari", topic: "months" },
+            { id: 2, arabic: "فِبْرَايِر", malay: "Februari", topic: "months" },
+            { id: 3, arabic: "مَارِس", malay: "Mac", topic: "months" },
+            { id: 4, arabic: "أَبْرِيل", malay: "April", topic: "months" },
+            { id: 5, arabic: "مَايُو", malay: "Mei", topic: "months" },
+            { id: 6, arabic: "يُونِيُو", malay: "Jun", topic: "months" },
+            { id: 7, arabic: "يُولِيُو", malay: "Julai", topic: "months" },
+            { id: 8, arabic: "أَغُسْطُس", malay: "Ogos", topic: "months" },
+            { id: 9, arabic: "سِبْتَمْبَر", malay: "September", topic: "months" },
+            { id: 10, arabic: "أُكْتُوبَر", malay: "Oktober", topic: "months" },
+            { id: 11, arabic: "نُوفَمْبَر", malay: "November", topic: "months" },
+            { id: 12, arabic: "دِيسَمْبَر", malay: "Disember", topic: "months" },
+            { id: 13, arabic: "يَوْمُ المُعَلِّمِينَ", malay: "Hari Guru", topic: "events" },
+            { id: 14, arabic: "يَوْمُ المِيلَادِ", malay: "Hari Lahir / Ulang Tahun", topic: "events" },
+            { id: 15, arabic: "يَوْمُ الرِّيَاضَةِ", malay: "Hari Sukan", topic: "events" },
+            { id: 16, arabic: "يَوْمُ الأُغْنِيَةِ", malay: "Hari Nyanyian", topic: "events" },
+            { id: 17, arabic: "يَوْمُ العُلُومِ", malay: "Hari Sains", topic: "events" },
+            { id: 18, arabic: "يَوْمُ اللُّغَةِ العَرَبِيَّةِ", malay: "Hari Bahasa Arab", topic: "events" },
+            { id: 19, arabic: "حَفْلُ التَّكْرِيمِ", malay: "Majlis Anugerah / Penghargaan", topic: "events" },
+            { id: 20, arabic: "مُدِيرٌ", malay: "Guru Besar / Pengetua", topic: "staff" },
+            { id: 21, arabic: "مُعَلِّمٌ", malay: "Guru (Lelaki)", topic: "staff" },
+            { id: 22, arabic: "مُعَلِّمَةٌ", malay: "Guru (Perempuan)", topic: "staff" },
+            { id: 23, arabic: "تِلْمِيذٌ", malay: "Murid / Murid Lelaki", topic: "staff" },
+            { id: 24, arabic: "تِلْمِيذَةٌ", malay: "Murid Perempuan", topic: "staff" },
+            { id: 25, arabic: "حَارِسٌ", malay: "Pengawal Keselamatan", topic: "staff" },
+            { id: 26, arabic: "أمِينُ المَكْتَبَةِ", malay: "Pustakawan", topic: "staff" },
+            { id: 27, arabic: "رَئِيسُ الفَصْلِ", malay: "Ketua Darjah / Kelas", topic: "staff" }
+        ];
+
+        const MONSTERS = [
+            { name: "Raksasa Jahlun", emoji: "👹", hp: 100 },
+            { name: "Naga Ghaflah", emoji: "🐉", hp: 120 },
+            { name: "Iblis Nisyan", emoji: "👾", hp: 110 },
+            { name: "Golem Kasal", emoji: "🗿", hp: 130 }
+        ];
+
+        const AVATAR_SPRITES = {
+            "Knight": { emoji: "🗡️", name: "Pahlawan" },
+            "Mage": { emoji: "🧙‍♂️", name: "Penyihir" },
+            "Archer": { emoji: "🏹", name: "Pemanah" }
+        };
+
+        // Game State Variables
+        let gameState = {
+            playerName: "",
+            playerClass: "",
+            heroType: "Knight",
+            selectedTopic: "all",
+            playerHP: 100,
+            maxPlayerHP: 100,
+            monsterHP: 100,
+            maxMonsterHP: 100,
+            score: 0,
+            combo: 0,
+            maxCombo: 0,
+            correctCount: 0,
+            totalAnswered: 0,
+            currentMonsterIndex: 0,
+            currentQuestion: null,
+            activeQuestionsPool: [],
+            isPaused: false
+        };
+
+        let soundEnabled = { bgm: true, sfx: true };
+
+        function playSFX(type) {
+            if (!soundEnabled.sfx) return;
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                if (type === 'hit') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.15);
+                    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.15);
+                } else if (type === 'success') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, ctx.currentTime);
+                    osc.frequency.setValueAtTime(600, ctx.currentTime + 0.1);
+                    osc.frequency.setValueAtTime(800, ctx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.3);
+                } else if (type === 'damage') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(100, ctx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(50, ctx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.2);
+                }
+            } catch (e) {
+                console.log("AudioContext not allowed without gesture", e);
+            }
+        }
+
+        function toggleBGM() {
+            soundEnabled.bgm = !soundEnabled.bgm;
+            document.getElementById('bgm-icon').textContent = soundEnabled.bgm ? '🎵' : '🔇';
+            document.getElementById('btn-bgm').querySelector('span:last-child').textContent = soundEnabled.bgm ? 'BGM: ON' : 'BGM: OFF';
+        }
+
+        function toggleSFX() {
+            soundEnabled.sfx = !soundEnabled.sfx;
+            document.getElementById('sfx-icon').textContent = soundEnabled.sfx ? '🔊' : '🔇';
+            document.getElementById('btn-sfx').querySelector('span:last-child').textContent = soundEnabled.sfx ? 'SFX: ON' : 'SFX: OFF';
+        }
+
+        function speakArabicQuestion() {
+            if (!gameState.currentQuestion || gameState.isPaused) return;
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(gameState.currentQuestion.arabic);
+                utterance.lang = 'ar-SA';
+                utterance.rate = 0.85;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function togglePauseGame() {
+            gameState.isPaused = !gameState.isPaused;
+            const pauseModal = document.getElementById('modal-pause');
+            const optionsGrid = document.getElementById('options-grid');
+
+            if (gameState.isPaused) {
+                if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+                pauseModal.classList.remove('hidden');
+                pauseModal.classList.add('flex');
+                optionsGrid.style.pointerEvents = 'none';
+                optionsGrid.style.opacity = '0.4';
+            } else {
+                pauseModal.classList.remove('flex');
+                pauseModal.classList.add('hidden');
+                optionsGrid.style.pointerEvents = 'auto';
+                optionsGrid.style.opacity = '1';
+            }
+        }
+
+        function quitGamePrompt() {
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+            // If paused, hide pause modal temporarily and show quit confirmation
+            document.getElementById('modal-pause').classList.remove('flex');
+            document.getElementById('modal-pause').classList.add('hidden');
+
+            const quitModal = document.getElementById('modal-quit-confirm');
+            quitModal.classList.remove('hidden');
+            quitModal.classList.add('flex');
+        }
+
+        function closeQuitModal() {
+            const quitModal = document.getElementById('modal-quit-confirm');
+            quitModal.classList.remove('flex');
+            quitModal.classList.add('hidden');
+
+            // If it was paused before, return to pause modal
+            if (gameState.isPaused) {
+                const pauseModal = document.getElementById('modal-pause');
+                pauseModal.classList.remove('hidden');
+                pauseModal.classList.add('flex');
+            }
+        }
+
+        function quitGameConfirm() {
+            quitGamePrompt();
+        }
+
+        function executeQuitGame() {
+            gameState.isPaused = false;
+            document.getElementById('modal-quit-confirm').classList.remove('flex');
+            document.getElementById('modal-quit-confirm').classList.add('hidden');
+            document.getElementById('modal-pause').classList.remove('flex');
+            document.getElementById('modal-pause').classList.add('hidden');
+            
+            const optionsGrid = document.getElementById('options-grid');
+            optionsGrid.style.pointerEvents = 'auto';
+            optionsGrid.style.opacity = '1';
+
+            // Save record when player stops/quits the game early
+            const accuracy = gameState.totalAnswered > 0 ? Math.round((gameState.correctCount / gameState.totalAnswered) * 100) : 0;
+            saveRecordToStorage({
+                date: new Date().toLocaleString(),
+                timestamp: Date.now(),
+                name: gameState.playerName + " (Berhenti)",
+                class: gameState.playerClass,
+                hero: gameState.heroType,
+                score: gameState.score,
+                combo: gameState.maxCombo,
+                accuracy: accuracy
+            });
+
+            resetToHome();
+        }
+
+        function startGame(e) {
+            e.preventDefault();
+            gameState.playerName = document.getElementById('player-name').value.trim();
+            gameState.playerClass = document.getElementById('player-class').value.trim();
+            gameState.heroType = document.querySelector('input[name="hero-avatar"]:checked').value;
+            gameState.selectedTopic = document.getElementById('selected-topic').value;
+
+            // Filter questions
+            if (gameState.selectedTopic === 'all') {
+                gameState.activeQuestionsPool = [...VOCAB_DATABASE];
+            } else {
+                gameState.activeQuestionsPool = VOCAB_DATABASE.filter(q => q.topic === gameState.selectedTopic);
+            }
+
+            if (gameState.activeQuestionsPool.length === 0) {
+                gameState.activeQuestionsPool = [...VOCAB_DATABASE];
+            }
+
+            // Reset stats
+            gameState.playerHP = 100;
+            gameState.maxPlayerHP = 100;
+            gameState.score = 0;
+            gameState.combo = 0;
+            gameState.maxCombo = 0;
+            gameState.correctCount = 0;
+            gameState.totalAnswered = 0;
+            gameState.currentMonsterIndex = 0;
+
+            setupCurrentMonster();
+            
+            // Switch views
+            document.getElementById('view-registration').classList.add('hidden');
+            document.getElementById('view-result').classList.add('hidden');
+            document.getElementById('view-battle').classList.remove('hidden');
+
+            updateHUD();
+            nextQuestion();
+        }
+
+        function setupCurrentMonster() {
+            const m = MONSTERS[gameState.currentMonsterIndex % MONSTERS.length];
+            gameState.maxMonsterHP = m.hp;
+            gameState.monsterHP = m.hp;
+            document.getElementById('monster-name').textContent = m.name;
+            document.getElementById('monster-emoji').textContent = m.emoji;
+            updateHUD();
+        }
+
+        function updateHUD() {
+            const heroData = AVATAR_SPRITES[gameState.heroType] || AVATAR_SPRITES["Knight"];
+            document.getElementById('battle-hero-avatar-icon').textContent = heroData.emoji;
+            document.getElementById('player-emoji').textContent = heroData.emoji;
+            document.getElementById('battle-player-name').textContent = gameState.playerName;
+            document.getElementById('battle-player-class').textContent = gameState.playerClass;
+            document.getElementById('hero-title-name').textContent = heroData.name;
+
+            document.getElementById('combo-count').textContent = gameState.combo + 'x';
+            document.getElementById('battle-score').textContent = gameState.score;
+
+            // HP Bars
+            const playerPct = Math.max(0, (gameState.playerHP / gameState.maxPlayerHP) * 100);
+            const monsterPct = Math.max(0, (gameState.monsterHP / gameState.maxMonsterHP) * 100);
+
+            document.getElementById('player-hp-bar').style.width = playerPct + '%';
+            document.getElementById('player-hp-text').textContent = `${gameState.playerHP}/${gameState.maxPlayerHP}`;
+
+            document.getElementById('monster-hp-bar').style.width = monsterPct + '%';
+            document.getElementById('monster-hp-text').textContent = `${gameState.monsterHP}/${gameState.maxMonsterHP}`;
+        }
+
+        function nextQuestion() {
+            if (gameState.activeQuestionsPool.length === 0) {
+                if (gameState.selectedTopic === 'all') {
+                    gameState.activeQuestionsPool = [...VOCAB_DATABASE];
+                } else {
+                    gameState.activeQuestionsPool = VOCAB_DATABASE.filter(q => q.topic === gameState.selectedTopic);
+                }
+            }
+
+            // Pick random question
+            const qIndex = Math.floor(Math.random() * gameState.activeQuestionsPool.length);
+            gameState.currentQuestion = gameState.activeQuestionsPool.splice(qIndex, 1)[0];
+
+            document.getElementById('question-arabic').textContent = gameState.currentQuestion.arabic;
+            
+            const topicLabels = { months: "Bulan Miladiyyah", events: "Sambutan Sekolah", staff: "Warga Sekolah" };
+            document.getElementById('topic-tag').textContent = topicLabels[gameState.currentQuestion.topic] || "Kosa Kata";
+
+            // Generate options (1 correct, 3 distractors)
+            let distractors = VOCAB_DATABASE.filter(v => v.malay !== gameState.currentQuestion.malay);
+            shuffleArray(distractors);
+            let choices = [gameState.currentQuestion.malay, distractors[0].malay, distractors[1].malay, distractors[2].malay];
+            shuffleArray(choices);
+
+            const optionsGrid = document.getElementById('options-grid');
+            optionsGrid.innerHTML = '';
+
+            choices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.className = "p-4 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-amber-500 text-slate-100 font-bold text-base sm:text-lg transition transform active:scale-95 shadow-md text-center";
+                btn.textContent = choice;
+                btn.onclick = () => handleAnswer(choice, btn);
+                optionsGrid.appendChild(btn);
+            });
+
+            // Automatically speak new question if allowed
+            speakArabicQuestion();
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function handleAnswer(selectedMalay, btnElement) {
+            const isCorrect = (selectedMalay === gameState.currentQuestion.malay);
+            gameState.totalAnswered++;
+
+            const allButtons = document.querySelectorAll('#options-grid button');
+            allButtons.forEach(b => b.disabled = true);
+
+            if (isCorrect) {
+                playSFX('success');
+                gameState.correctCount++;
+                gameState.combo++;
+                if (gameState.combo > gameState.maxCombo) gameState.maxCombo = gameState.combo;
+
+                const damage = 25 + (gameState.combo * 5);
+                gameState.score += 100 + (gameState.combo * 20);
+                gameState.monsterHP -= damage;
+
+                btnElement.classList.add('bg-emerald-600', 'border-emerald-400', 'text-white');
+                showFloatingText(`-${damage} HP! 💥`, 'text-emerald-400');
+                triggerAttackEffect('monster');
+
+                if (gameState.monsterHP <= 0) {
+                    gameState.monsterHP = 0;
+                    updateHUD();
+                    setTimeout(() => {
+                        gameState.currentMonsterIndex++;
+                        if (gameState.currentMonsterIndex >= 3) {
+                            endGame(true);
+                        } else {
+                            showFloatingText("Raksasa Tewas! Raksasa Baru Muncul! 🌟", 'text-amber-400');
+                            setupCurrentMonster();
+                            nextQuestion();
+                        }
+                    }, 800);
+                    return;
+                }
+            } else {
+                playSFX('damage');
+                gameState.combo = 0;
+                const pDamage = 20;
+                gameState.playerHP -= pDamage;
+
+                btnElement.classList.add('bg-rose-600', 'border-rose-400', 'text-white');
+                // Highlight correct button
+                allButtons.forEach(b => {
+                    if (b.textContent === gameState.currentQuestion.malay) {
+                        b.classList.add('bg-emerald-700/50', 'border-emerald-500');
+                    }
+                });
+
+                showFloatingText(`-${pDamage} HP! ❌`, 'text-rose-400');
+                triggerAttackEffect('player');
+
+                if (gameState.playerHP <= 0) {
+                    gameState.playerHP = 0;
+                    updateHUD();
+                    setTimeout(() => endGame(false), 800);
+                    return;
+                }
+            }
+
+            updateHUD();
+            setTimeout(() => {
+                nextQuestion();
+            }, 1200);
+        }
+
+        function showFloatingText(text, colorClass) {
+            const container = document.getElementById('floating-text-container');
+            const el = document.createElement('div');
+            el.className = `absolute text-2xl sm:text-4xl font-black ${colorClass} animate-float-damage`;
+            el.textContent = text;
+            container.appendChild(el);
+            setTimeout(() => el.remove(), 1000);
+        }
+
+        function triggerAttackEffect(target) {
+            if (target === 'monster') {
+                const sprite = document.getElementById('monster-sprite');
+                sprite.classList.add('animate-shake');
+                const slash = document.getElementById('monster-slash-effect');
+                slash.classList.remove('hidden');
+                setTimeout(() => {
+                    sprite.classList.remove('animate-shake');
+                    slash.classList.add('hidden');
+                }, 400);
+            } else {
+                const sprite = document.getElementById('player-sprite');
+                sprite.classList.add('animate-shake');
+                const slash = document.getElementById('player-slash-effect');
+                slash.classList.remove('hidden');
+                setTimeout(() => {
+                    sprite.classList.remove('animate-shake');
+                    slash.classList.add('hidden');
+                }, 400);
+            }
+        }
+
+        function endGame(isVictory) {
+            document.getElementById('view-battle').classList.add('hidden');
+            document.getElementById('view-result').classList.remove('hidden');
+
+            const accuracy = gameState.totalAnswered > 0 ? Math.round((gameState.correctCount / gameState.totalAnswered) * 100) : 0;
+
+            if (isVictory) {
+                document.getElementById('result-icon').textContent = '🏆';
+                document.getElementById('result-title').textContent = 'TAHNIAH! KEMENANGAN!';
+                document.getElementById('result-subtitle').textContent = 'Anda berjaya menumpaskan semua gelombang Raksasa Mufradat!';
+            } else {
+                document.getElementById('result-icon').textContent = '💀';
+                document.getElementById('result-title').textContent = 'PERCUBAAN TAMAT';
+                document.getElementById('result-subtitle').textContent = 'Jangan putus asa! Cuba lagi untuk menguasai kosa kata Bahasa Arab.';
+            }
+
+            document.getElementById('final-score').textContent = gameState.score;
+            document.getElementById('final-combo').textContent = gameState.maxCombo + 'x';
+            document.getElementById('final-accuracy').textContent = accuracy + '%';
+            document.getElementById('final-total').textContent = `${gameState.correctCount}/${gameState.totalAnswered}`;
+
+            // Save record to local storage for Teacher Admin Panel
+            saveRecordToStorage({
+                date: new Date().toLocaleString(),
+                timestamp: Date.now(),
+                name: gameState.playerName,
+                class: gameState.playerClass,
+                hero: gameState.heroType,
+                score: gameState.score,
+                combo: gameState.maxCombo,
+                accuracy: accuracy
+            });
+        }
+
+        function playAgain() {
+            document.getElementById('view-result').classList.add('hidden');
+            document.getElementById('view-registration').classList.remove('hidden');
+        }
+
+        function resetToHome() {
+            window.speechSynthesis.cancel();
+            document.getElementById('view-battle').classList.add('hidden');
+            document.getElementById('view-result').classList.add('hidden');
+            document.getElementById('view-registration').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function scrollToVocabList() {
+            resetToHome();
+            setTimeout(() => {
+                const el = document.getElementById('vocab-reference-section');
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth' });
+                }
+            }, 100);
+        }
+
+        function saveRecordToStorage(record) {
+            let records = JSON.parse(localStorage.getItem('wira_mufradat_records') || '[]');
+            records.unshift(record);
+            localStorage.setItem('wira_mufradat_records', JSON.stringify(records));
+        }
+
+        function openAdminModal() {
+            document.getElementById('modal-admin').classList.remove('hidden');
+            document.getElementById('modal-admin').classList.add('flex');
+            // Check if already authenticated in session
+            if (sessionStorage.getItem('admin_auth') === 'true') {
+                showAdminDashboard();
+            } else {
+                document.getElementById('admin-login-sec').classList.remove('hidden');
+                document.getElementById('admin-dashboard-sec').classList.add('hidden');
+            }
+        }
+
+        function closeAdminModal() {
+            document.getElementById('modal-admin').classList.remove('flex');
+            document.getElementById('modal-admin').classList.add('hidden');
+        }
+
+        function verifyAdminPass(e) {
+            e.preventDefault();
+            const pass = document.getElementById('admin-pass-input').value;
+            if (pass === 'admin' || pass === 'guru') {
+                sessionStorage.setItem('admin_auth', 'true');
+                showAdminDashboard();
+            } else {
+                alert('Kata laluan salah! Sila cuba "admin" atau "guru".');
+            }
+        }
+
+        function showAdminDashboard() {
+            document.getElementById('admin-login-sec').classList.add('hidden');
+            document.getElementById('admin-dashboard-sec').classList.remove('hidden');
+            document.getElementById('admin-dashboard-sec').classList.add('flex');
+            populateClassFilter();
+            renderRecordsTable();
+        }
+
+        function getStoredRecords() {
+            return JSON.parse(localStorage.getItem('wira_mufradat_records') || '[]');
+        }
+
+        function populateClassFilter() {
+            const records = getStoredRecords();
+            const classSet = new Set();
+            records.forEach(r => { if (r.class) classSet.add(r.class); });
+
+            const select = document.getElementById('filter-class');
+            select.innerHTML = '<option value="all">Semua Kelas</option>';
+            classSet.forEach(cls => {
+                const opt = document.createElement('option');
+                opt.value = cls;
+                opt.textContent = cls;
+                select.appendChild(opt);
+            });
+        }
+
+        function renderRecordsTable() {
+            const records = getStoredRecords();
+            const filterClass = document.getElementById('filter-class').value;
+            const filterDate = document.getElementById('filter-date').value;
+
+            const filtered = records.filter(r => {
+                let matchClass = (filterClass === 'all' || r.class === filterClass);
+                let matchDate = true;
+                if (filterDate) {
+                    const recordDateOnly = r.date.split(',')[0].trim();
+                    // Basic date comparison check
+                    matchDate = r.date.includes(filterDate.split('-').reverse().join('/')) || true;
+                }
+                return matchClass;
+            });
+
+            const tbody = document.getElementById('records-table-body');
+            tbody.innerHTML = '';
+
+            const noMsg = document.getElementById('no-records-msg');
+            if (filtered.length === 0) {
+                noMsg.classList.remove('hidden');
+                return;
+            } else {
+                noMsg.classList.add('hidden');
+            }
+
+            filtered.forEach((r, idx) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-900/50 transition";
+                tr.innerHTML = `
+                    <td class="p-3 font-semibold text-slate-400">${idx + 1}</td>
+                    <td class="p-3 text-slate-300">${r.date}</td>
+                    <td class="p-3 font-bold text-amber-300">${r.name}</td>
+                    <td class="p-3 text-cyan-300">${r.class}</td>
+                    <td class="p-3">${r.hero}</td>
+                    <td class="p-3 text-center font-bold text-emerald-400">${r.score}</td>
+                    <td class="p-3 text-center text-amber-400">${r.combo}x</td>
+                    <td class="p-3 text-center text-purple-300">${r.accuracy}%</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function applyAdminFilters() {
+            renderRecordsTable();
+        }
+
+        function resetAdminFilters() {
+            document.getElementById('filter-class').value = 'all';
+            document.getElementById('filter-date').value = '';
+            renderRecordsTable();
+        }
+
+        function clearAllRecords() {
+            if (confirm("Adakah anda pasti ingin memadam semua rekod murid?")) {
+                localStorage.removeItem('wira_mufradat_records');
+                renderRecordsTable();
+                populateClassFilter();
+            }
+        }
+
+        function exportCSV() {
+            const records = getStoredRecords();
+            if (records.length === 0) {
+                alert("Tiada rekod untuk dieksport.");
+                return;
+            }
+            let csv = "Bil,Tarikh Masa,Nama Murid,Kelas,Hero,Skor,Kombo,Ketepatan\n";
+            records.forEach((r, i) => {
+                csv += `${i+1},"${r.date}","${r.name}","${r.class}",${r.hero},${r.score},${r.combo},${r.accuracy}%\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Laporan_Wira_Mufradat_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+        }
+
+        function printRecords() {
+            document.getElementById('print-timestamp').textContent = new Date().toLocaleString();
+            window.print();
+        }
+
+        // Initialize mock demo record if none exist
+        window.addEventListener('DOMContentLoaded', () => {
+            if (!localStorage.getItem('wira_mufradat_records')) {
+                const sampleRecords = [
+                    { date: "13/10/2026, 09:30:15", timestamp: Date.now() - 3600000, name: "Ahmad Zaki", class: "5 UPM", hero: "Knight", score: 1450, combo: 6, accuracy: 90 },
+                    { date: "13/10/2026, 10:05:42", timestamp: Date.now() - 1800000, name: "Siti Aminah", class: "5 UTM", hero: "Mage", score: 1820, combo: 8, accuracy: 95 }
+                ];
+                localStorage.setItem('wira_mufradat_records', JSON.stringify(sampleRecords));
+            }
+        });
+    </script>
+</body>
+</html>
